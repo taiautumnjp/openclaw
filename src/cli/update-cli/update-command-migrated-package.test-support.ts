@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { expect, vi } from "vitest";
+import { expectBytesEqual } from "../../../test/helpers/file-snapshots.js";
 import { createConfigIO } from "../../config/io.js";
 import * as nodeSqlite from "../../infra/node-sqlite.js";
 import { createRetainedPackageSwap } from "../../infra/package-update-swap.test-support.js";
@@ -273,8 +274,12 @@ export async function expectMigratedPackageFinalization(
     : withMigratedTerminalResult(run, continueUpdate, onResult);
   const settled = await operation.catch((error: unknown) => error);
   if (diagnostics) {
-    expect(observedProgress).toEqual(expectedProgress);
-    expect(Buffer.concat(stderrChunks)).toEqual(Buffer.concat([expectedProgress, cancellation]));
+    expectBytesEqual(observedProgress, expectedProgress, "observed progress");
+    expectBytesEqual(
+      Buffer.concat(stderrChunks),
+      Buffer.concat([expectedProgress, cancellation]),
+      "drained stderr",
+    );
     expect(settled).toBeInstanceOf(Error);
     expectNoCalls(stdout, onResult, complete, rollback);
     await expect(fs.access(transaction.backupRoot)).resolves.toBeUndefined();
